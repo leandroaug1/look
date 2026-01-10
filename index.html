@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Style ERP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root { --sidebar-bg: #212529; --sidebar-width: 250px; }
+    body { background-color: #f4f6f9; min-height: 100vh; overflow-x: hidden; }
+    #wrapper { display: flex; width: 100%; }
+    #sidebar { min-width: var(--sidebar-width); max-width: var(--sidebar-width); background: var(--sidebar-bg); color: #fff; min-height: 100vh; }
+    #sidebar .sidebar-header { padding: 20px; background: #1a1d20; border-bottom: 1px solid #4b545c; }
+    #sidebar ul.components { padding: 20px 0; }
+    #sidebar ul li a { padding: 15px 25px; display: block; color: #adb5bd; text-decoration: none; cursor: pointer; }
+    #sidebar ul li a:hover, #sidebar ul li a.active { color: #fff; background: #343a40; }
+    #content { width: 100%; padding: 20px; }
+    .look-card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; }
+    .look-body { display: flex; height: 180px; }
+    .look-img-part { flex: 1; background-size: cover; background-position: center; border-right: 1px solid #fff; }
+    .upload-area { border: 2px dashed #ced4da; padding: 30px; text-align: center; cursor: pointer; background: white; transition: 0.3s; }
+    .upload-area:hover { border-color: #0d6efd; background-color: #f8f9fa; }
+    .thumb-img { width: 60px; height: 60px; object-fit: cover; margin: 2px; border-radius: 4px; border: 1px solid #ddd; }
+    #loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    @media (max-width: 768px) { #sidebar { display: none; } #sidebar.active { display: block; position: absolute; z-index: 1000; height: 100%; } }
+  </style>
+</head>
+<body>
+  <div id="loader-overlay">
+    <div class="spinner-border text-primary" role="status"></div>
+    <h5 class="mt-3" id="loader-text">Carregando Sistema...</h5>
+  </div>
+
+  <div id="wrapper">
+    <nav id="sidebar">
+      <div class="sidebar-header"><h3>Style ERP</h3></div>
+      <ul class="list-unstyled components">
+        <li><a onclick="navTo('dashboard')" id="link-dashboard" class="active"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+        <li><a onclick="navTo('create')" id="link-create"><i class="bi bi-plus-circle me-2"></i>Novo Planejamento</a></li>
+        <li><a onclick="loadDashboard()" id="link-refresh"><i class="bi bi-arrow-clockwise me-2"></i>Atualizar</a></li>
+      </ul>
+    </nav>
+
+    <div id="content">
+      <button class="btn btn-dark d-md-none mb-3" onclick="document.getElementById('sidebar').classList.toggle('active')">Menu</button>
+
+      <div id="view-dashboard" class="view-section">
+        <h2>Dashboard</h2>
+        <div class="alert alert-info border" id="msg-status"><i class="bi bi-cloud-check"></i> Conectando...</div>
+        <div class="row mb-4">
+          <div class="col-6"><div class="card bg-primary text-white p-3"><h3><span id="stat-total">0</span> Looks</h3></div></div>
+          <div class="col-6"><div class="card bg-success text-white p-3"><h3><span id="stat-used">0</span> Usados</h3></div></div>
+        </div>
+        <div id="collections-list"></div>
+      </div>
+
+      <div id="view-create" class="view-section d-none">
+        <h2>Novo Planejamento</h2>
+        <div class="alert alert-warning"><small>Imagens são comprimidas automaticamente para evitar travamentos.</small></div>
+        <div class="card p-3">
+          <input type="text" id="new-name" class="form-control mb-3" placeholder="Nome da Coleção (Ex: Trabalho Verão)">
+          <select id="new-mode" class="form-select mb-3" onchange="toggleInputs()">
+            <option value="2pc">2 Peças (Camisa + Calça)</option>
+            <option value="3pc">3 Peças (+ Calçado)</option>
+          </select>
+          <div class="row">
+            <div class="col-md-4 mb-2"><div class="upload-area" onclick="document.getElementById('fA').click()">Parte de Cima 👕</div><input type="file" id="fA" hidden multiple accept="image/*" onchange="hFile(this,'pA')"><div id="pA"></div></div>
+            <div class="col-md-4 mb-2"><div class="upload-area" onclick="document.getElementById('fB').click()">Parte de Baixo 👖</div><input type="file" id="fB" hidden multiple accept="image/*" onchange="hFile(this,'pB')"><div id="pB"></div></div>
+            <div class="col-md-4 mb-2" id="divC" style="display:none"><div class="upload-area" onclick="document.getElementById('fC').click()">Calçado 👟</div><input type="file" id="fC" hidden multiple accept="image/*" onchange="hFile(this,'pC')"><div id="pC"></div></div>
+          </div>
+          <button class="btn btn-primary w-100 mt-4 btn-lg" onclick="submitForm()">✨ Gerar Combinações</button>
+        </div>
+      </div>
+
+      <div id="view-details" class="view-section d-none">
+        <button class="btn btn-secondary mb-3" onclick="navTo('dashboard')">Voltar</button>
+        <h3 id="det-title"></h3>
+        <div id="det-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let filesA=[], filesB=[], filesC=[];
+    
+    window.onload = function() { loadDashboard(); };
+
+    function navTo(id) {
+      document.querySelectorAll('.view-section').forEach(e => e.classList.add('d-none'));
+      document.getElementById('view-'+id).classList.remove('d-none');
+    }
+
+    function loadDashboard() {
+      document.getElementById('loader-text').innerText = "Carregando dados...";
+      document.getElementById('loader-overlay').style.display = 'flex';
+      
+      google.script.run.withSuccessHandler(res => {
+        document.getElementById('loader-overlay').style.display = 'none';
+        if(res.error) { document.getElementById('msg-status').innerHTML = `<span class='text-danger'>Erro: ${res.error}</span>`; return; }
+        document.getElementById('msg-status').innerHTML = `<strong>Conectado a:</strong> ${res.sheetName || 'Planilha'}`;
+        document.getElementById('stat-total').innerText = res.stats.total;
+        document.getElementById('stat-used').innerText = res.stats.used;
+        
+        let html = '';
+        if(res.collections.length === 0) {
+            html = '<div class="alert alert-secondary">Nenhuma coleção encontrada.</div>';
+        } else {
+            html = '<ul class="list-group">';
+            res.collections.forEach(c => {
+            html += `<li class="list-group-item d-flex justify-content-between align-items-center"><strong>${c.name}</strong> 
+                <div><span class="badge bg-secondary me-2">${c.used}/${c.count}</span>
+                <button class="btn btn-sm btn-primary" onclick="openCol('${c.id}','${c.name}')">Abrir</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="delCol('${c.id}')">Excluir</button></div></li>`;
+            });
+            html += '</ul>';
+        }
+        document.getElementById('collections-list').innerHTML = html;
+        navTo('dashboard');
+      }).withFailureHandler(err => { alert(err); document.getElementById('loader-overlay').style.display = 'none'; }).getDashboardData();
+    }
+
+    function hFile(inp, pId) {
+      const arr = inp.id==='fA'?filesA : (inp.id==='fB'?filesB:filesC);
+      arr.length=0; document.getElementById(pId).innerHTML='';
+      Array.from(inp.files).forEach(f => {
+        arr.push(f);
+        let img=document.createElement('img'); img.src=URL.createObjectURL(f); img.className='thumb-img';
+        document.getElementById(pId).appendChild(img);
+      });
+    }
+
+    function toggleInputs() { document.getElementById('divC').style.display = document.getElementById('new-mode').value==='3pc'?'block':'none'; }
+
+    function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+          }
+        }
+      });
+    }
+
+    async function submitForm() {
+      const name = document.getElementById('new-name').value;
+      const mode = document.getElementById('new-mode').value;
+      if(!name || filesA.length===0 || filesB.length===0) return alert("Preencha tudo!");
+      
+      document.getElementById('loader-text').innerText = "Comprimindo e Enviando...";
+      document.getElementById('loader-overlay').style.display = 'flex';
+      
+      try {
+        const bA = await Promise.all(filesA.map(f => compressImage(f)));
+        const bB = await Promise.all(filesB.map(f => compressImage(f)));
+        const bC = await Promise.all(filesC.map(f => compressImage(f)));
+        
+        google.script.run.withSuccessHandler(res => {
+          if(res.success) { alert("Sucesso!"); filesA=[]; filesB=[]; filesC=[]; document.getElementById('new-name').value=''; document.getElementById('pA').innerHTML=''; document.getElementById('pB').innerHTML=''; document.getElementById('pC').innerHTML=''; loadDashboard(); }
+          else { alert("Erro: " + res.error); document.getElementById('loader-overlay').style.display = 'none'; }
+        }).createNewCollection({name, mode, imgsA:bA, imgsB:bB, imgsC:bC});
+      } catch(e) { alert(e); document.getElementById('loader-overlay').style.display = 'none'; }
+    }
+
+    function openCol(id, name) {
+      document.getElementById('loader-text').innerText = "Carregando...";
+      document.getElementById('loader-overlay').style.display = 'flex';
+      document.getElementById('det-title').innerText = name;
+      google.script.run.withSuccessHandler(looks => {
+        let html = '<div class="row">';
+        looks.forEach(l => {
+          let imgs = `<div class="look-img-part" style="background-image:url(${l.imgA})"></div><div class="look-img-part" style="background-image:url(${l.imgB})"></div>`;
+          if(l.imgC) imgs += `<div class="look-img-part" style="background-image:url(${l.imgC})"></div>`;
+          html += `<div class="col-md-4 col-sm-6"><div class="look-card">
+              <div class="p-2 fw-bold bg-light d-flex justify-content-between"><span>${l.day}</span><span>${l.week}</span></div>
+              <div class="look-body">${imgs}</div>
+              <div class="p-2"><button class="btn w-100 ${l.status==='USADO'?'btn-success':'btn-outline-secondary'}" onclick="tog(this,${l.rowIndex})">${l.status==='USADO'?'Usado':'Marcar'}</button></div></div></div>`;
+        });
+        document.getElementById('det-container').innerHTML = html + '</div>';
+        document.getElementById('loader-overlay').style.display = 'none';
+        navTo('details');
+      }).getCollectionDetails(id);
+    }
+
+    function tog(btn, row) {
+      const isU = btn.classList.contains('btn-success');
+      btn.className = isU ? 'btn w-100 btn-outline-secondary' : 'btn w-100 btn-success';
+      btn.innerText = isU ? 'Marcar' : 'Usado';
+      google.script.run.setStatus(row, isU?'':'USADO');
+    }
+
+    function delCol(id) { 
+        if(confirm("Apagar?")) { 
+            document.getElementById('loader-text').innerText = "Excluindo...";
+            document.getElementById('loader-overlay').style.display = 'flex'; 
+            google.script.run.withSuccessHandler(loadDashboard).deleteCollection(id); 
+        } 
+    }
+  </script>
+</body>
+</html>
