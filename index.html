@@ -143,7 +143,7 @@
 
   <script>
     // --- CONFIGURAÇÃO ---
-    // 👇👇👇 COLE SUA URL DO GOOGLE SCRIPT AQUI NOVAMENTE 👇👇👇
+    // 👇👇👇 COLE SUA URL DO GOOGLE APPS SCRIPT AQUI ABAIXO (ENTRE AS ASPAS) 👇👇👇
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxLriIUyelb5I6EQpTg63wJvGyAUCvlDXqwvBhEbSEOMhiwl8l3-H_zQuXeHZ9JfItv-g/exec"; 
     
     let filesA=[], filesB=[], filesC=[];
@@ -160,7 +160,7 @@
     }
 
     async function fetchData(params, method = 'GET', bodyData = null) {
-        if(WEB_APP_URL.includes("COLE_SUA_URL")) {
+        if(WEB_APP_URL.includes("Chttps://script.google.com/macros/s/AKfycbxLriIUyelb5I6EQpTg63wJvGyAUCvlDXqwvBhEbSEOMhiwl8l3-H_zQuXeHZ9JfItv-g/exec")) {
             alert("Você precisa configurar a WEB_APP_URL no código!");
             return { error: "URL não configurada" };
         }
@@ -252,7 +252,6 @@
       
       if(!name || filesA.length===0 || filesB.length===0) return alert("Preencha tudo!");
 
-      // --- NOVA VALIDAÇÃO 3x3 ---
       if(mode === '3x3') {
           if(filesA.length !== 3 || filesB.length !== 3) {
               return alert("No modo Desafio 3x3, selecione exatamente:\n- 3 Peças de Cima\n- 3 Peças de Baixo");
