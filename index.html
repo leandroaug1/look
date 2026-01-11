@@ -22,7 +22,8 @@
 <body>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwjORbicICJEgjcspk6e4GBy5VJNETyQeMDsIOBN2HsT2n-YM0vjY9n0SuvhruUukkfTQ/exec"; 
+    // Link atualizado para corresponder ao seu script de Looks original
+    const API_URL = "https://script.google.com/macros/s/AKfycbw-M8DKCPjeUlIHe5_tsPnBjT7cNuy3iTWYYZ1IuXM250iT0CL7GlhtklfCrXEq7X54Jg/exec"; 
   </script>
 
   <div id="loader-overlay">
@@ -84,7 +85,6 @@
     // --- FUNÇÕES DE API ---
     async function apiGet(action, params = "") {
       try {
-        // Removemos a verificação manual. Se falhar, vai cair no catch.
         const res = await fetch(`${API_URL}?action=${action}${params}`);
         const json = await res.json();
         return json;
