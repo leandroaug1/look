@@ -7,23 +7,61 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    :root { --sidebar-bg: #212529; --sidebar-width: 250px; }
+    :root { --sidebar-bg: #212529; --sidebar-width: 250px; --sidebar-collapsed-width: 70px; }
     body { background-color: #f4f6f9; min-height: 100vh; overflow-x: hidden; }
-    #wrapper { display: flex; width: 100%; }
-    #sidebar { min-width: var(--sidebar-width); max-width: var(--sidebar-width); background: var(--sidebar-bg); color: #fff; min-height: 100vh; }
-    #sidebar .sidebar-header { padding: 20px; background: #1a1d20; border-bottom: 1px solid #4b545c; }
+    
+    #wrapper { display: flex; width: 100%; transition: all 0.3s; }
+    
+    /* Estilos do Sidebar */
+    #sidebar { 
+        min-width: var(--sidebar-width); 
+        max-width: var(--sidebar-width); 
+        background: var(--sidebar-bg); 
+        color: #fff; 
+        min-height: 100vh;
+        transition: all 0.3s;
+    }
+    
+    #sidebar .sidebar-header { 
+        padding: 20px; 
+        background: #1a1d20; 
+        border-bottom: 1px solid #4b545c;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
     #sidebar ul.components { padding: 20px 0; }
-    #sidebar ul li a { padding: 15px 25px; display: block; color: #adb5bd; text-decoration: none; cursor: pointer; }
+    #sidebar ul li a { padding: 15px 25px; display: block; color: #adb5bd; text-decoration: none; cursor: pointer; white-space: nowrap; overflow: hidden; }
     #sidebar ul li a:hover, #sidebar ul li a.active { color: #fff; background: #343a40; }
+    #sidebar ul li a i { margin-right: 10px; font-size: 1.1rem; vertical-align: middle; }
+
+    /* Estilos quando Recolhido (Collapsed) */
+    #sidebar.collapsed { min-width: var(--sidebar-collapsed-width); max-width: var(--sidebar-collapsed-width); }
+    #sidebar.collapsed .sidebar-header h3 { display: none; }
+    #sidebar.collapsed .sidebar-header { padding: 15px 10px; justify-content: center; }
+    #sidebar.collapsed ul li a { text-align: center; padding: 15px 5px; }
+    #sidebar.collapsed ul li a span { display: none; } /* Esconde o texto */
+    #sidebar.collapsed ul li a i { margin-right: 0; font-size: 1.4rem; }
+
     #content { width: 100%; padding: 20px; }
+    
+    /* Cards e Upload */
     .look-card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; }
     .look-body { display: flex; height: 180px; }
     .look-img-part { flex: 1; background-size: cover; background-position: center; border-right: 1px solid #fff; }
     .upload-area { border: 2px dashed #ced4da; padding: 30px; text-align: center; cursor: pointer; background: white; transition: 0.3s; }
     .upload-area:hover { border-color: #0d6efd; background-color: #f8f9fa; }
     .thumb-img { width: 60px; height: 60px; object-fit: cover; margin: 2px; border-radius: 4px; border: 1px solid #ddd; }
+    
     #loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-    @media (max-width: 768px) { #sidebar { display: none; } #sidebar.active { display: block; position: absolute; z-index: 1000; height: 100%; } }
+    
+    /* Responsivo Mobile */
+    @media (max-width: 768px) { 
+        #sidebar { margin-left: calc(var(--sidebar-width) * -1); } 
+        #sidebar.active { margin-left: 0; position: fixed; z-index: 1000; height: 100%; } 
+        #sidebar.collapsed { margin-left: calc(var(--sidebar-collapsed-width) * -1); }
+    }
   </style>
 </head>
 <body>
@@ -34,16 +72,35 @@
 
   <div id="wrapper">
     <nav id="sidebar">
-      <div class="sidebar-header"><h3>Style ERP</h3></div>
+      <div class="sidebar-header">
+          <h3 class="m-0">Style ERP</h3>
+          <button class="btn btn-sm btn-outline-secondary border-0 text-white" onclick="toggleSidebar()">
+              <i class="bi bi-list fs-4"></i>
+          </button>
+      </div>
       <ul class="list-unstyled components">
-        <li><a onclick="navTo('dashboard')" id="link-dashboard" class="active"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
-        <li><a onclick="navTo('create')" id="link-create"><i class="bi bi-plus-circle me-2"></i>Novo Planejamento</a></li>
-        <li><a onclick="loadDashboard()" id="link-refresh"><i class="bi bi-arrow-clockwise me-2"></i>Atualizar</a></li>
+        <li>
+            <a onclick="navTo('dashboard')" id="link-dashboard" class="active">
+                <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+            </a>
+        </li>
+        <li>
+            <a onclick="navTo('create')" id="link-create">
+                <i class="bi bi-plus-circle"></i><span>Novo Planejamento</span>
+            </a>
+        </li>
+        <li>
+            <a onclick="loadDashboard()" id="link-refresh">
+                <i class="bi bi-arrow-clockwise"></i><span>Atualizar</span>
+            </a>
+        </li>
       </ul>
     </nav>
 
     <div id="content">
-      <button class="btn btn-dark d-md-none mb-3" onclick="document.getElementById('sidebar').classList.toggle('active')">Menu</button>
+      <button class="btn btn-dark d-md-none mb-3" onclick="document.getElementById('sidebar').classList.toggle('active')">
+          <i class="bi bi-list"></i> Menu
+      </button>
 
       <div id="view-dashboard" class="view-section">
         <h2>Dashboard</h2>
@@ -83,10 +140,9 @@
 
   <script>
     // --- CONFIGURAÇÃO ---
-    // COLE AQUI A URL QUE VOCÊ COPIOU DA IMPLANTAÇÃO (DEPLOY) DO GOOGLE APPS SCRIPT
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9znJJLj2Em7BmDIz4Sb4I1ZGcYK_-L8yOyvf0o0vFXblXcORXF1_AHYCKLxBpg5B2Rw/exec"; 
-    // Exemplo: "https://script.google.com/macros/s/AKfycbx.../exec"
-
+    // 👇👇👇 COLE SUA URL DO GOOGLE SCRIPT AQUI 👇👇👇
+    const WEB_APP_URL = "COLE_SUA_URL_DO_GOOGLE_SCRIPT_AQUI"; 
+    
     let filesA=[], filesB=[], filesC=[];
     
     window.onload = function() { loadDashboard(); };
@@ -96,7 +152,12 @@
       document.getElementById('view-'+id).classList.remove('d-none');
     }
 
-    // --- COMUNICAÇÃO COM API (SUBSTITUI google.script.run) ---
+    // Função para recolher/expandir o menu
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    // --- COMUNICAÇÃO COM API ---
     async function fetchData(params, method = 'GET', bodyData = null) {
         if(WEB_APP_URL.includes("COLE_SUA_URL")) {
             alert("Você precisa configurar a WEB_APP_URL no código!");
@@ -104,11 +165,8 @@
         }
 
         let url = WEB_APP_URL + params;
-        const options = {
-            method: method,
-        };
+        const options = { method: method };
 
-        // Truque: Enviar como text/plain para evitar erro de CORS (Preflight) no Google Apps Script
         if (method === 'POST' && bodyData) {
             options.body = JSON.stringify(bodyData);
             options.headers = { "Content-Type": "text/plain;charset=utf-8" };
@@ -205,11 +263,7 @@
         const bB = await Promise.all(filesB.map(f => compressImage(f)));
         const bC = await Promise.all(filesC.map(f => compressImage(f)));
         
-        const payload = {
-            action: 'create',
-            name, mode, imgsA:bA, imgsB:bB, imgsC:bC
-        };
-
+        const payload = { action: 'create', name, mode, imgsA:bA, imgsB:bB, imgsC:bC };
         const res = await fetchData("", 'POST', payload);
 
         if(res.success) { 
@@ -258,26 +312,16 @@
 
     function tog(btn, row) {
       const isU = btn.classList.contains('btn-success');
-      // Atualização visual otimista
       btn.className = isU ? 'btn w-100 btn-outline-secondary' : 'btn w-100 btn-success';
       btn.innerText = isU ? 'Marcar' : 'Usado';
-      
-      fetchData("", 'POST', {
-          action: 'setStatus',
-          rowIndex: row,
-          status: isU ? '' : 'USADO'
-      });
+      fetchData("", 'POST', { action: 'setStatus', rowIndex: row, status: isU ? '' : 'USADO' });
     }
 
     function delCol(id) { 
         if(confirm("Apagar esta coleção e todos os looks?")) { 
             document.getElementById('loader-text').innerText = "Excluindo...";
             document.getElementById('loader-overlay').style.display = 'flex'; 
-            
-            fetchData("", 'POST', {
-                action: 'delete',
-                colId: id
-            }).then(res => loadDashboard());
+            fetchData("", 'POST', { action: 'delete', colId: id }).then(res => loadDashboard());
         } 
     }
   </script>
