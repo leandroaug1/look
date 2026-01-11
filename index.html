@@ -22,8 +22,9 @@
 <body>
 
   <script>
-    const API_URL = "COLE_SEU_LINK_AQUI"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbwjORbicICJEgjcspk6e4GBy5VJNETyQeMDsIOBN2HsT2n-YM0vjY9n0SuvhruUukkfTQ/exec"; 
   </script>
+
   <div id="loader-overlay">
     <div class="spinner-border text-primary" role="status"></div>
     <h5 class="mt-3" id="loader-text">Conectando ao Banco de Dados...</h5>
@@ -82,20 +83,20 @@
 
     // --- FUNÇÕES DE API ---
     async function apiGet(action, params = "") {
-      if(API_URL.includes("COLE_SEU")) { alert("ERRO: Você não colou o link do Google Script no código do GitHub!"); return null; }
       try {
+        // Removemos a verificação manual. Se falhar, vai cair no catch.
         const res = await fetch(`${API_URL}?action=${action}${params}`);
         const json = await res.json();
         return json;
       } catch(e) { 
         console.error(e);
-        alert("Erro de conexão. Verifique se a implantação está como 'Qualquer Pessoa'."); 
+        // Se der erro aqui, é 99% certeza que é PERMISSÃO no Google
+        alert("Erro de conexão.\n\nVerifique se você implantou o Google Script como: 'QUALQUER PESSOA'."); 
         return null; 
       }
     }
 
     async function apiPost(data) {
-      if(API_URL.includes("COLE_SEU")) { alert("ERRO: Cole o link da API!"); return null; }
       // Usamos text/plain para evitar problemas de CORS no Google
       const res = await fetch(API_URL, {
         method: "POST",
@@ -131,7 +132,7 @@
       
       let html = '';
       if(data.collections.length === 0) {
-        html = '<div class="alert alert-light text-center">Nenhuma coleção. Clique em "Novo" para começar.</div>';
+        html = '<div class="alert alert-light text-center">Nenhuma coleção encontrada.</div>';
       } else {
         html = '<ul class="list-group">';
         data.collections.forEach(c => {
@@ -150,7 +151,7 @@
 
     async function loadDetails(id, name) {
       document.getElementById('loader-overlay').classList.remove('hidden');
-      document.getElementById('loader-text').innerText = "Baixando fotos...";
+      document.getElementById('loader-text').innerText = "Baixando fotos (isso pode demorar um pouco)...";
       
       const data = await apiGet('getDetails', `&id=${id}`);
       document.getElementById('loader-overlay').classList.add('hidden');
