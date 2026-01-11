@@ -117,10 +117,13 @@
         <div class="alert alert-warning"><small>Imagens são comprimidas automaticamente para evitar travamentos.</small></div>
         <div class="card p-3">
           <input type="text" id="new-name" class="form-control mb-3" placeholder="Nome da Coleção (Ex: Trabalho Verão)">
+          
           <select id="new-mode" class="form-select mb-3" onchange="toggleInputs()">
             <option value="2pc">2 Peças (Camisa + Calça)</option>
             <option value="3pc">3 Peças (+ Calçado)</option>
+            <option value="3x3">Desafio 3x3 (3 Tops + 3 Bottoms)</option>
           </select>
+          
           <div class="row">
             <div class="col-md-4 mb-2"><div class="upload-area" onclick="document.getElementById('fA').click()">Parte de Cima 👕</div><input type="file" id="fA" hidden multiple accept="image/*" onchange="hFile(this,'pA')"><div id="pA"></div></div>
             <div class="col-md-4 mb-2"><div class="upload-area" onclick="document.getElementById('fB').click()">Parte de Baixo 👖</div><input type="file" id="fB" hidden multiple accept="image/*" onchange="hFile(this,'pB')"><div id="pB"></div></div>
@@ -140,8 +143,8 @@
 
   <script>
     // --- CONFIGURAÇÃO ---
-    // 👇👇👇 COLE SUA URL DO GOOGLE SCRIPT AQUI 👇👇👇
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzP1J7zowC5sxomrN_OF65NQc3PaNK39bKUeYL496d2YG2XPC7WXv6JBcQirRlV6JX07g/exec"; 
+    // 👇👇👇 COLE SUA URL DO GOOGLE SCRIPT AQUI NOVAMENTE 👇👇👇
+    const WEB_APP_URL = "COLE_SUA_URL_DO_GOOGLE_SCRIPT_AQUI"; 
     
     let filesA=[], filesB=[], filesC=[];
     
@@ -152,12 +155,10 @@
       document.getElementById('view-'+id).classList.remove('d-none');
     }
 
-    // Função para recolher/expandir o menu
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('collapsed');
     }
 
-    // --- COMUNICAÇÃO COM API ---
     async function fetchData(params, method = 'GET', bodyData = null) {
         if(WEB_APP_URL.includes("COLE_SUA_URL")) {
             alert("Você precisa configurar a WEB_APP_URL no código!");
@@ -189,12 +190,7 @@
       fetchData("?action=getDashboard")
       .then(res => {
         document.getElementById('loader-overlay').style.display = 'none';
-        
-        if(res.error) { 
-            document.getElementById('msg-status').innerHTML = `<span class='text-danger'>Erro: ${res.error}</span>`; 
-            return; 
-        }
-        
+        if(res.error) { document.getElementById('msg-status').innerHTML = `<span class='text-danger'>Erro: ${res.error}</span>`; return; }
         document.getElementById('msg-status').innerHTML = `<strong>Conectado a:</strong> ${res.sheetName || 'Planilha'}`;
         document.getElementById('stat-total').innerText = res.stats ? res.stats.total : 0;
         document.getElementById('stat-used').innerText = res.stats ? res.stats.used : 0;
@@ -253,7 +249,15 @@
     async function submitForm() {
       const name = document.getElementById('new-name').value;
       const mode = document.getElementById('new-mode').value;
+      
       if(!name || filesA.length===0 || filesB.length===0) return alert("Preencha tudo!");
+
+      // --- NOVA VALIDAÇÃO 3x3 ---
+      if(mode === '3x3') {
+          if(filesA.length !== 3 || filesB.length !== 3) {
+              return alert("No modo Desafio 3x3, selecione exatamente:\n- 3 Peças de Cima\n- 3 Peças de Baixo");
+          }
+      }
       
       document.getElementById('loader-text').innerText = "Comprimindo e Enviando...";
       document.getElementById('loader-overlay').style.display = 'flex';
@@ -278,10 +282,7 @@
             alert("Erro: " + (res.error || 'Desconhecido')); 
             document.getElementById('loader-overlay').style.display = 'none'; 
         }
-      } catch(e) { 
-          alert(e); 
-          document.getElementById('loader-overlay').style.display = 'none'; 
-      }
+      } catch(e) { alert(e); document.getElementById('loader-overlay').style.display = 'none'; }
     }
 
     function openCol(id, name) {
@@ -318,7 +319,7 @@
     }
 
     function delCol(id) { 
-        if(confirm("Apagar esta coleção e todos os looks?")) { 
+        if(confirm("Apagar?")) { 
             document.getElementById('loader-text').innerText = "Excluindo...";
             document.getElementById('loader-overlay').style.display = 'flex'; 
             fetchData("", 'POST', { action: 'delete', colId: id }).then(res => loadDashboard());
