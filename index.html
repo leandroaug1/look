@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Style ERP</title>
@@ -83,6 +82,11 @@
   </div>
 
   <script>
+    // --- CONFIGURAÇÃO ---
+    // COLE AQUI A URL QUE VOCÊ COPIOU DA IMPLANTAÇÃO (DEPLOY) DO GOOGLE APPS SCRIPT
+    const WEB_APP_URL = "COLE_SUA_URL_DO_GOOGLE_SCRIPT_AQUI"; 
+    // Exemplo: "https://script.google.com/macros/s/AKfycbx.../exec"
+
     let filesA=[], filesB=[], filesC=[];
     
     window.onload = function() { loadDashboard(); };
@@ -92,19 +96,53 @@
       document.getElementById('view-'+id).classList.remove('d-none');
     }
 
+    // --- COMUNICAÇÃO COM API (SUBSTITUI google.script.run) ---
+    async function fetchData(params, method = 'GET', bodyData = null) {
+        if(WEB_APP_URL.includes("COLE_SUA_URL")) {
+            alert("Você precisa configurar a WEB_APP_URL no código!");
+            return { error: "URL não configurada" };
+        }
+
+        let url = WEB_APP_URL + params;
+        const options = {
+            method: method,
+        };
+
+        // Truque: Enviar como text/plain para evitar erro de CORS (Preflight) no Google Apps Script
+        if (method === 'POST' && bodyData) {
+            options.body = JSON.stringify(bodyData);
+            options.headers = { "Content-Type": "text/plain;charset=utf-8" };
+        }
+
+        try {
+            const req = await fetch(url, options);
+            const res = await req.json();
+            return res;
+        } catch (e) {
+            console.error(e);
+            return { error: e.toString() };
+        }
+    }
+
     function loadDashboard() {
       document.getElementById('loader-text').innerText = "Carregando dados...";
       document.getElementById('loader-overlay').style.display = 'flex';
       
-      google.script.run.withSuccessHandler(res => {
+      fetchData("?action=getDashboard")
+      .then(res => {
         document.getElementById('loader-overlay').style.display = 'none';
-        if(res.error) { document.getElementById('msg-status').innerHTML = `<span class='text-danger'>Erro: ${res.error}</span>`; return; }
+        
+        if(res.error) { 
+            document.getElementById('msg-status').innerHTML = `<span class='text-danger'>Erro: ${res.error}</span>`; 
+            return; 
+        }
+        
         document.getElementById('msg-status').innerHTML = `<strong>Conectado a:</strong> ${res.sheetName || 'Planilha'}`;
-        document.getElementById('stat-total').innerText = res.stats.total;
-        document.getElementById('stat-used').innerText = res.stats.used;
+        document.getElementById('stat-total').innerText = res.stats ? res.stats.total : 0;
+        document.getElementById('stat-used').innerText = res.stats ? res.stats.used : 0;
         
         let html = '';
-        if(res.collections.length === 0) {
+        if(!res.collections || res.collections.length === 0) {
             html = '<div class="alert alert-secondary">Nenhuma coleção encontrada.</div>';
         } else {
             html = '<ul class="list-group">';
@@ -118,7 +156,7 @@
         }
         document.getElementById('collections-list').innerHTML = html;
         navTo('dashboard');
-      }).withFailureHandler(err => { alert(err); document.getElementById('loader-overlay').style.display = 'none'; }).getDashboardData();
+      });
     }
 
     function hFile(inp, pId) {
@@ -167,45 +205,79 @@
         const bB = await Promise.all(filesB.map(f => compressImage(f)));
         const bC = await Promise.all(filesC.map(f => compressImage(f)));
         
-        google.script.run.withSuccessHandler(res => {
-          if(res.success) { alert("Sucesso!"); filesA=[]; filesB=[]; filesC=[]; document.getElementById('new-name').value=''; document.getElementById('pA').innerHTML=''; document.getElementById('pB').innerHTML=''; document.getElementById('pC').innerHTML=''; loadDashboard(); }
-          else { alert("Erro: " + res.error); document.getElementById('loader-overlay').style.display = 'none'; }
-        }).createNewCollection({name, mode, imgsA:bA, imgsB:bB, imgsC:bC});
-      } catch(e) { alert(e); document.getElementById('loader-overlay').style.display = 'none'; }
+        const payload = {
+            action: 'create',
+            name, mode, imgsA:bA, imgsB:bB, imgsC:bC
+        };
+
+        const res = await fetchData("", 'POST', payload);
+
+        if(res.success) { 
+            alert("Sucesso!"); 
+            filesA=[]; filesB=[]; filesC=[]; 
+            document.getElementById('new-name').value=''; 
+            document.getElementById('pA').innerHTML=''; 
+            document.getElementById('pB').innerHTML=''; 
+            document.getElementById('pC').innerHTML=''; 
+            loadDashboard(); 
+        } else { 
+            alert("Erro: " + (res.error || 'Desconhecido')); 
+            document.getElementById('loader-overlay').style.display = 'none'; 
+        }
+      } catch(e) { 
+          alert(e); 
+          document.getElementById('loader-overlay').style.display = 'none'; 
+      }
     }
 
     function openCol(id, name) {
       document.getElementById('loader-text').innerText = "Carregando...";
       document.getElementById('loader-overlay').style.display = 'flex';
       document.getElementById('det-title').innerText = name;
-      google.script.run.withSuccessHandler(looks => {
+      
+      fetchData("?action=getDetails&id=" + id)
+      .then(looks => {
         let html = '<div class="row">';
-        looks.forEach(l => {
-          let imgs = `<div class="look-img-part" style="background-image:url(${l.imgA})"></div><div class="look-img-part" style="background-image:url(${l.imgB})"></div>`;
-          if(l.imgC) imgs += `<div class="look-img-part" style="background-image:url(${l.imgC})"></div>`;
-          html += `<div class="col-md-4 col-sm-6"><div class="look-card">
-              <div class="p-2 fw-bold bg-light d-flex justify-content-between"><span>${l.day}</span><span>${l.week}</span></div>
-              <div class="look-body">${imgs}</div>
-              <div class="p-2"><button class="btn w-100 ${l.status==='USADO'?'btn-success':'btn-outline-secondary'}" onclick="tog(this,${l.rowIndex})">${l.status==='USADO'?'Usado':'Marcar'}</button></div></div></div>`;
-        });
+        if(looks && looks.length > 0) {
+            looks.forEach(l => {
+            let imgs = `<div class="look-img-part" style="background-image:url(${l.imgA})"></div><div class="look-img-part" style="background-image:url(${l.imgB})"></div>`;
+            if(l.imgC) imgs += `<div class="look-img-part" style="background-image:url(${l.imgC})"></div>`;
+            html += `<div class="col-md-4 col-sm-6"><div class="look-card">
+                <div class="p-2 fw-bold bg-light d-flex justify-content-between"><span>${l.day}</span><span>${l.week}</span></div>
+                <div class="look-body">${imgs}</div>
+                <div class="p-2"><button class="btn w-100 ${l.status==='USADO'?'btn-success':'btn-outline-secondary'}" onclick="tog(this,${l.rowIndex})">${l.status==='USADO'?'Usado':'Marcar'}</button></div></div></div>`;
+            });
+        } else {
+            html += '<div class="col-12"><div class="alert alert-warning">Nenhum look encontrado.</div></div>';
+        }
         document.getElementById('det-container').innerHTML = html + '</div>';
         document.getElementById('loader-overlay').style.display = 'none';
         navTo('details');
-      }).getCollectionDetails(id);
+      });
     }
 
     function tog(btn, row) {
       const isU = btn.classList.contains('btn-success');
+      // Atualização visual otimista
       btn.className = isU ? 'btn w-100 btn-outline-secondary' : 'btn w-100 btn-success';
       btn.innerText = isU ? 'Marcar' : 'Usado';
-      google.script.run.setStatus(row, isU?'':'USADO');
+      
+      fetchData("", 'POST', {
+          action: 'setStatus',
+          rowIndex: row,
+          status: isU ? '' : 'USADO'
+      });
     }
 
     function delCol(id) { 
-        if(confirm("Apagar?")) { 
+        if(confirm("Apagar esta coleção e todos os looks?")) { 
             document.getElementById('loader-text').innerText = "Excluindo...";
             document.getElementById('loader-overlay').style.display = 'flex'; 
-            google.script.run.withSuccessHandler(loadDashboard).deleteCollection(id); 
+            
+            fetchData("", 'POST', {
+                action: 'delete',
+                colId: id
+            }).then(res => loadDashboard());
         } 
     }
   </script>
